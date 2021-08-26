@@ -17,7 +17,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 
 
-class MyKNN:
+class reighnsKNN:
     def __init__(
         self,
         k: int,
@@ -212,6 +212,7 @@ class MyKNN:
         - [Video on Decision Boundary of KNN](https://youtu.be/k_7gMp5wh5A)
         - [Important on Bias Variance](http://scott.fortmann-roe.com/docs/BiasVariance.html)
         - [Intuition on Scaling Data](https://stats.stackexchange.com/questions/287425/why-do-you-need-to-scale-data-in-knn)
+        - [Intuition on weighted KNN](https://www.geeksforgeeks.org/weighted-k-nn/)
 
         Args:
             k (int): K in K-Nearest-Neighbours
@@ -304,6 +305,16 @@ class MyKNN:
         return y_pred
 
     def predict_proba(self, X_test: np.ndarray) -> np.ndarray:
+        """Return probability estimates for the test data X.
+
+        Only Applicable for Classification
+
+        Args:
+            X_test (np.ndarray): [description]
+
+        Returns:
+            p: np.ndarray: [description]
+        """
         pass
 
 
@@ -316,13 +327,14 @@ if __name__ == "__main__":
     sklearn_knn = KNeighborsClassifier(n_neighbors=3)
     sklearn_predictions = sklearn_knn.fit(X_train, y_train).score(X_test, y_test)
 
-    HN_KNN_CLASSIFICATION = MyKNN(
+    HN_KNN_CLASSIFICATION = reighnsKNN(
         k=3, distance_metric=DistanceMetrics.euclidean_distance, mode="classification"
     )
     HN_CLASSIFICATION_PREDICTIONS = HN_KNN_CLASSIFICATION.predict(
         X_train, y_train, X_test
     )
 
+    print(HN_CLASSIFICATION_PREDICTIONS)
     print("\nSKLEARN Accuracy score : %.3f" % (sklearn_predictions * 100))
     print(
         "\nHN Accuracy score : %.3f"
@@ -330,7 +342,7 @@ if __name__ == "__main__":
     )
     print()
 
-    print(sklearn_knn.fit(X_train, y_train).predict_proba(X_test))
+    # print(sklearn_knn.fit(X_train, y_train).predict_proba(X_test))
     # print("Recall score : %f" % (sklearn.metrics.recall_score(y_val, preds) * 100))
     # print("ROC score : %f\n" % (sklearn.metrics.roc_auc_score(y_val, preds) * 100))
     # print(sklearn.metrics.confusion_matrix(y_val, preds))
@@ -344,7 +356,7 @@ if __name__ == "__main__":
     neigh.fit(X, y)
 
     print(neigh.predict([[1.5]]))
-    HN_KNN_REGRESSION = MyKNN(
+    HN_KNN_REGRESSION = reighnsKNN(
         k=2, distance_metric=DistanceMetrics.euclidean_distance, mode="regression"
     )
     HN_REGRESSION_PREDICTIONS = HN_KNN_REGRESSION.predict(X, y, np.array([[1.5]]))
