@@ -8,71 +8,23 @@ from sklearn.datasets import make_classification
 from sklearn.metrics import roc_curve
 from sklearn.model_selection import train_test_split
 
+import os
+import sys  # noqa
 
-class Sigmoid:
-    def __call__(self, z):
-        sigmoid = 1 / (1 + np.exp(-z))
-        return sigmoid
+sys.path.append(os.getcwd())  # noqa
 
-    def gradient(self, z):
-        """
-        Compute the gradient of the sigmoid function with respect to the input z.
-        This is useful since in the backward pass for say Logistic Regression's Cross-Entropy Loss,
-        dl/dz is needed in the chain rule, and dl/dz = dl/dA * dA/dz where A is y_pred is sigmoid(z).
-        Consequently, dA/dz makes use of the gradient of the sigmoid function.
+import importlib
 
-                Parameters:
-                        z (np.array): 2D numpy array (n_samples, n_features). Input Matrix of size m by n; where m is the number of samples, and n the number of features.
-
-                Returns:
-                        dsigmoid_dz (scalar): gradient of sigmoid function at the input z.
-
-        """
-        sigmoid = self.__call__(z)  # call sigmoid(z) = 1/ (1+e^{-z})
-        # the derivative of sigmoid(z) is sigmoid'(z) = sigmoid(z) * (1-sigmoid(z))
-        dsigmoid_dz = sigmoid * (1 - sigmoid)
-        return dsigmoid_dz
+LossFunction = importlib.import_module(
+    "reighns-loss-functions.loss_functions", package="reighns-loss-functions"
+)
 
 
-def cross_entropy(y_true, y_pred, epsilon=1e-12):
-    """
-        https://stackoverflow.com/questions/47377222/what-is-the-problem-with-my-implementation-of-the-cross-entropy-function
-        Computes cross entropy between targets (encoded as one-hot vectors)
-        and y_pred.
-        Input: y_pred (N, k) ndarray
-               y_true (N, k) ndarray
-        Returns: scalar
-        predictions = np.array([[0.25,0.25,0.25,0.25],
-                            [0.01,0.01,0.01,0.96]])
-    targets = np.array([[0,0,0,1],
-                       [0,0,0,1]])
-                       ans = 0.71355817782  #Correct answer
-    x = cross_entropy(predictions, targets)
-    print(np.isclose(x,ans))
-    """
-    y_pred = np.clip(y_pred, epsilon, 1.0 - epsilon)
-    # take note that y_pred is of shape 1 x n_samples as stated in our framework
-    n_samples = y_pred.shape[1]
+ActivationFunction = importlib.import_module(
+    "reighns-activation-functions.activations", package="reighns-activation-functions"
+)
 
-    # cross entropy function
-    cross_entropy_function = (
-        y_true * np.log(y_pred) + (1-y_true)*np.log(1-y_pred))
-    # cross entropy function here is same shape as y_true and y_pred since we are
-    # just performing element wise operations on both of them.
-    assert cross_entropy_function.shape == (1, n_samples)
-
-    # we sum up all the loss for each individual sample
-    total_cross_entropy_loss = -np.sum(cross_entropy_function, axis=1)
-    assert total_cross_entropy_loss.shape == (1,)
-
-    # we then average out the total loss across m samples, but we squeeze it to
-    # make it a scalar; squeeze along axis = None since there is no column axix
-    average_cross_entropy_loss = np.squeeze(
-        total_cross_entropy_loss / n_samples, axis=None)
-
-    # cross_entropy_loss = -np.sum(y_true * np.log(y_pred)) / n_samples
-    # print(np.isclose(average_cross_entropy_loss, cross_entropy_loss))
-    return average_cross_entropy_loss
+Metric = importlib.import_module("reighns-metrics.metrics", package="reighns-metrics")
 
 
 class MyLogisticRegression:
@@ -80,7 +32,7 @@ class MyLogisticRegression:
         self,
         has_intercept: bool = True,
         learning_rate: float = 1e-3,
-        solver: str = "Gradient Descent",
+        solver: str = "Batch Gradient Descent",
         num_epochs: int = 1000,
     ):
         super().__init__()
@@ -95,7 +47,7 @@ class MyLogisticRegression:
         self.optimal_betas: Optional[np.ndarray[float]] = None
         self._fitted: bool = False
 
-        self.sigmoid = Sigmoid()
+        self.sigmoid = ActivationFunction.Sigmoid()
 
     def _initiatilize_weights(self, X: np.ndarray) -> np.ndarray:
         """
@@ -110,8 +62,7 @@ class MyLogisticRegression:
         """
         n_features = np.shape(X)[1]
         limit = 1 / np.sqrt(n_features)
-        uniform_weights = np.random.uniform(-limit,
-                                            limit, size=(n_features, 1))
+        uniform_weights = np.random.uniform(-limit, limit, size=(n_features, 1))
         return uniform_weights
 
     def _check_shape(self, X: np.ndarray, y_true: np.ndarray):
@@ -195,21 +146,19 @@ class MyLogisticRegression:
             # y_pred must be a row vector with shape 1 x n_samples
             assert y_pred.shape == (1, n_samples)
 
-            GRADIENT_VECTOR = -np.matmul((y_true - y_pred
-                                          ), X).T
+            GRADIENT_VECTOR = -np.matmul((y_true - y_pred), X).T
             # gradient vector must be a column vector of (n_features, 1)
             assert GRADIENT_VECTOR.shape == (n_features, 1)
             # we need to divide gradient vector by number of samples.
             # this is because each element inside the gradient vector is an accumulation/sum of across all samples.
             AVG_GRADIENT_VECTOR = (1 / n_samples) * GRADIENT_VECTOR
 
-            if self.solver == "Gradient Descent":
+            if self.solver == "Batch Gradient Descent":
                 self.optimal_betas -= self.learning_rate * AVG_GRADIENT_VECTOR
-                cross_entropy_loss = cross_entropy(y_true, y_pred)
+                cross_entropy_loss = LossFunction.cross_entropy(y_true, y_pred)
 
                 if epoch % 1000 == 0:
-                    print("epoch: {} | loss: {}".format(
-                        epoch, cross_entropy_loss))
+                    print("epoch: {} | loss: {}".format(epoch, cross_entropy_loss))
 
             self.coef_ = self.optimal_betas[1:]
             self.intercept_ = self.optimal_betas[0]
@@ -241,6 +190,43 @@ class MyLogisticRegression:
         y_pred = np.where(y_probs < 0.5, 0, 1)
 
         return y_probs, y_pred
+
+    def plot_decision_boundary(trues: np.ndarray, falses: np.ndarray):
+        """[summary]
+
+        Args:
+            trues (np.ndarray): [description]
+            falses (np.ndarray): [description]
+        """
+
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+
+        no_of_preds = len(trues) + len(falses)
+
+        ax.scatter(
+            [i for i in range(len(trues))],
+            trues,
+            s=25,
+            c="b",
+            marker="o",
+            label="Trues",
+        )
+        ax.scatter(
+            [i for i in range(len(falses))],
+            falses,
+            s=25,
+            c="r",
+            marker="s",
+            label="Falses",
+        )
+
+        plt.legend(loc="upper right")
+        ax.set_title("Decision Boundary")
+        ax.set_xlabel("N/2")
+        ax.set_ylabel("Predicted Probability")
+        plt.axhline(0.5, color="black")
+        plt.show()
 
 
 if __name__ == "__main__":
@@ -276,21 +262,17 @@ if __name__ == "__main__":
     print(logreg.coef_, logreg.intercept_)
     print("SKLEARN Validation Accuracy: {}".format(logreg.score(X_val, y_val)))
 
-    mylog = MyLogisticRegression(
-        learning_rate=0.1, has_intercept=True, num_epochs=5000)
+    mylog = MyLogisticRegression(learning_rate=0.1, has_intercept=True, num_epochs=5000)
     mylog.fit(X_train, y_train)
 
     print(mylog.coef_)
     logits, preds = mylog.predict(X_val)
 
     print(
-        "\nAccuracy score : %f" % (
-            sklearn.metrics.accuracy_score(y_val, preds) * 100)
+        "\nAccuracy score : %f" % (sklearn.metrics.accuracy_score(y_val, preds) * 100)
     )
-    print("Recall score : %f" %
-          (sklearn.metrics.recall_score(y_val, preds) * 100))
-    print("ROC score : %f\n" %
-          (sklearn.metrics.roc_auc_score(y_val, preds) * 100))
+    print("Recall score : %f" % (sklearn.metrics.recall_score(y_val, preds) * 100))
+    print("ROC score : %f\n" % (sklearn.metrics.roc_auc_score(y_val, preds) * 100))
     print(sklearn.metrics.confusion_matrix(y_val, preds))
     """
     ================================
