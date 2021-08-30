@@ -1,0 +1,5 @@
+Chapter 1 CS229
+Logistic Regression The Hundred Page ML Book
+ML glossary v good
+wikipedia is go to as well
+general assembly

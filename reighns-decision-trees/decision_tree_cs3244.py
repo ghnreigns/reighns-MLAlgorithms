@@ -38,13 +38,21 @@ class DecisionTreeClassifier:
         self.min_split = min_split
 
     def build_tree(self, dataset, cur_depth=0):
+        # take our x_train and y_train
         x, y = dataset[:, :-1], dataset[:, -1]
+
+        # num_sample and num_features, 149 samples, 4 features
         n, n_dim = x.shape
 
         # recursively build the subtrees
+        # min_split means min_samples_split in scikit-learn
+        # depth equals max_depthint, default=None
+        # The maximum depth of the tree. If None, then nodes are expanded until all leaves are pure or until all leaves contain less than min_samples_split samples.
         if n >= self.min_split and cur_depth <= self.depth:
-            best_split = self.get_best_split(dataset, n, n_dim)
 
+            # best split
+            best_split = self.get_best_split(dataset, n, n_dim)
+            # print(best_split)
             if best_split["info_gain"] > 0:
                 left_tree = self.build_tree(best_split["left"], cur_depth + 1)
                 right_tree = self.build_tree(best_split["right"], cur_depth + 1)
@@ -64,18 +72,31 @@ class DecisionTreeClassifier:
 
     def get_best_split(self, dataset, n, n_dim):
         best_split = {}
+        # initiate info gain as -infinity
         max_info_gain = -float("inf")
 
+        # for each feature x_i
         for idx in range(n_dim):
+            # denote feat_val as the column vector $X_{i}$ where $X$ is the data matrix.
+            # note that we are using all rows but subsetting on the feature column
             feat_val = dataset[:, idx]
+
+            # Find all possible values that this feature $x_{i}$ can take on.
+            # Denote possible_boundss as A_{x_{i}} = {a_i} where a_i denotes the unique value that x_i can take on.
             possible_boundss = np.unique(feat_val)
 
+            # for each unique value in the set A_{x_{i}}
             for thresh in possible_boundss:
-                # data_left, data_right = self.split(dataset, idx, thresh)
+                # for each row of training data of tuple (x^{(i)}, y^{(i)}), we check if this row's feature i is smaller or bigger than threshold.
+                # in first loop, we check feature x_{1} so for each row, we just check the first element.
+                # and split accordignly to two brances.
                 data_left = np.array([row for row in dataset if row[idx] <= thresh])
                 data_right = np.array([row for row in dataset if row[idx] > thresh])
 
+                # ensure that
                 if len(data_left) > 0 and len(data_right) > 0:
+                    # basically: this step calculates info gain of each sub-dataset and chooses the best one.
+
                     y, left_y, right_y = (
                         dataset[:, -1],
                         data_left[:, -1],
@@ -151,8 +172,11 @@ Y = df.iloc[:, -1].values.reshape(-1, 1)
 X = np.array(X)
 Y = np.array(Y)
 
+print(X.shape, Y.shape)
 clf = DecisionTreeClassifier()
 clf.fit(X, Y)  # split this into training and testing datasets
+pred = clf.predict(X)
+# print(pred)
 
 
 def print_tree(root=None, indent="  "):
