@@ -1,6 +1,21 @@
 import numpy as np
 import pandas as pd
+import logging
+import os
+import sys  # noqa
 
+sys.path.append(os.getcwd())  # noqa
+from typing import *
+import pandas as pd
+import importlib
+
+Entropy = importlib.import_module(
+    "reighns-utils.scripts.entropy", package="reighns-utils"
+)
+
+import pprint
+
+logging.basicConfig(filename="example.log", filemode="w", level=logging.DEBUG)
 """
 Decision Trees are greedy algorithms
 that maximise the current Information Gain
@@ -32,27 +47,36 @@ class DTNode:
 
 
 class DecisionTreeClassifier:
-    def __init__(self, depth=2, min_split=2):
+    def __init__(self, max_depth=2, min_samples_split=2):
+        # min_samples_split means min_samples_split in scikit-learn
+        # max_depth equals max_depthint, default=None
+        # The maximum max_depth of the tree. If None, then nodes are expanded until all leaves are pure or until all leaves contain less than min_samples_split samples.
         self.root = None
-        self.depth = depth
-        self.min_split = min_split
+        self.max_depth = max_depth
+        self.min_samples_split = min_samples_split
 
     def build_tree(self, dataset, cur_depth=0):
         # take our x_train and y_train
         x, y = dataset[:, :-1], dataset[:, -1]
 
         # num_sample and num_features, 149 samples, 4 features
-        n, n_dim = x.shape
+        num_sample, num_feature = x.shape
+
+        assert x.shape == (num_sample, num_feature), y.shape == (num_sample,)
 
         # recursively build the subtrees
-        # min_split means min_samples_split in scikit-learn
-        # depth equals max_depthint, default=None
-        # The maximum depth of the tree. If None, then nodes are expanded until all leaves are pure or until all leaves contain less than min_samples_split samples.
-        if n >= self.min_split and cur_depth <= self.depth:
+
+        if num_sample >= self.min_samples_split and cur_depth <= self.max_depth:
 
             # best split
-            best_split = self.get_best_split(dataset, n, n_dim)
+            best_split = self.get_best_split(dataset, num_sample, num_feature)
+
             # print(best_split)
+
+            my_complex_dict = pprint.pformat(best_split)
+
+            # logging.info(f"My complex dict:\num_sample{my_complex_dict}")
+
             if best_split["info_gain"] > 0:
                 left_tree = self.build_tree(best_split["left"], cur_depth + 1)
                 right_tree = self.build_tree(best_split["right"], cur_depth + 1)
@@ -70,13 +94,17 @@ class DecisionTreeClassifier:
 
         return DTNode(value=value)
 
-    def get_best_split(self, dataset, n, n_dim):
+    def get_best_split(self, dataset, num_sample, num_feature):
+
+        # for each feature, for each unique value that each feature can take, we loop through and find the "best" attribute
+        # that has the highest info gain
+
         best_split = {}
         # initiate info gain as -infinity
         max_info_gain = -float("inf")
 
         # for each feature x_i
-        for idx in range(n_dim):
+        for idx in range(0, num_feature):
             # denote feat_val as the column vector $X_{i}$ where $X$ is the data matrix.
             # note that we are using all rows but subsetting on the feature column
             feat_val = dataset[:, idx]
@@ -112,9 +140,19 @@ class DecisionTreeClassifier:
                         best_split["info_gain"] = cur_info_gain
                         max_info_gain = cur_info_gain
 
+        tree_counter: int = 1  # to keep track number of splits
+        print(f"Tree Split : {tree_counter}")
+        tree_counter += 1
+
         return best_split
 
     def get_info_gain(self, parent, left, right):
+        # H(A_{x_i}) = \dfrac{num of elements in A_{x_i, a_i}}{num of A_{x_i}}
+
+        assert len(parent) == len(left) + len(right)
+        print(
+            f"Num of elements in parent is {len(parent)} \n in left is {len(left)} \n in right is {len(right)}"
+        )
         weight_left = len(left) / len(parent)
         weight_right = len(right) / len(parent)
 
@@ -126,13 +164,10 @@ class DecisionTreeClassifier:
         return info_gain
 
     def get_entropy(self, y):
-        labels = np.unique(y)
-        entropy = 0
-        for cls in labels:
-            p_cls = len(y[y == cls]) / len(y)
-            entropy += -p_cls * np.log2(p_cls)
-
-        return entropy
+        # Get entropy of a dataset, in particular, get the entropy of the y_true list.
+        # For details go utils and see.
+        # In our tree code, expect to calculate it in every decision.
+        return Entropy.calculate_entropy(y)
 
     def fit(self, x, y):
         dataset = np.concatenate((x, y), axis=1)
@@ -153,47 +188,82 @@ class DecisionTreeClassifier:
         return [self.make_pred(i, self.root) for i in x]
 
 
-cols = ["sepal_length", "sepal_width", "petal_length", "petal_width", "class"]
-df = pd.read_csv(
-    "/home/reighns/reighns-MLAlgorithms/reighns-decision-trees/data/iris.csv",
-    skiprows=1,
-    header=0,
-    names=cols,
-)
+if __name__ == "__main__":
 
-# replace class strings with integer indices
-df["class"] = df["class"].str.replace("Iris-setosa", "0")
-df["class"] = df["class"].str.replace("Iris-versicolor", "1")
-df["class"] = df["class"].str.replace("Iris-virginica", "2")
-df["class"] = df["class"].map(lambda x: int(x))
+    from sklearn.datasets import load_iris
+    from sklearn import tree
+    from sklearn.metrics import accuracy_score
+    import random
+    from random import shuffle
 
-X = df.iloc[:, :-1].values
-Y = df.iloc[:, -1].values.reshape(-1, 1)
-X = np.array(X)
-Y = np.array(Y)
+    random.seed(1992)
 
-print(X.shape, Y.shape)
-clf = DecisionTreeClassifier()
-clf.fit(X, Y)  # split this into training and testing datasets
-pred = clf.predict(X)
-# print(pred)
+    iris = load_iris()
+    ATTRIBUTE_MAP = {
+        "x_0": "sepal length (cm)",
+        "x_1": "sepal width (cm)",
+        "x_2": "petal length (cm)",
+        "x_3": "petal width (cm)",
+    }
+    CLASS_MAP = {0.0: "setosa", 1.0: "versicolor", 2.0: "virginica"}
 
+    X, y = iris.data, iris.target
+    shuffle(X), shuffle(y)
+    X, y = X[:20, :], y[:20]
+    y = y.reshape(-1, 1)  # reshape to concat in code.
+    print(X.shape, y.shape)
+    # logging.info(f"My complex dict:\num_sample{X}")
+    # logging.info(f"My complex dict:\num_sample{y}")
 
-def print_tree(root=None, indent="  "):
-    if root.value != None:
-        print(root.value)
-    else:
-        print(
-            "x_" + str(root.feat_idx),
-            "<=",
-            root.bounds,
-            ":",
-            format(root.info_gain, "0.4f"),
-        )
-        print(indent + "left: ", end="")
-        print_tree(root.left, indent + indent)
-        print(indent + "right: ", end="")
-        print_tree(root.right, indent + indent)
+    # clf = tree.DecisionTreeClassifier()
+    # clf = clf.fit(X, y)
 
+    # cols = ["sepal_length", "sepal_width", "petal_length", "petal_width", "class"]
+    # df = pd.read_csv(
+    #     "/home/reighns/reighns-MLAlgorithms/reighns-decision-trees/data/iris.csv",
+    #     skiprows=1,
+    #     header=0,
+    #     names=cols,
+    # )
 
-print_tree(clf.root)
+    # # replace class strings with integer indices
+    # df["class"] = df["class"].str.replace("Iris-setosa", "0")
+    # df["class"] = df["class"].str.replace("Iris-versicolor", "1")
+    # df["class"] = df["class"].str.replace("Iris-virginica", "2")
+    # df["class"] = df["class"].map(lambda x: int(x))
+
+    # X = df.iloc[:, :-1].values
+    # Y = df.iloc[:, -1].values.reshape(-1, 1)
+    # X = np.array(X)
+    # Y = np.array(Y)
+
+    # print(X.shape, Y.shape)
+
+    clf = DecisionTreeClassifier()
+    clf.fit(X, y)  # split this into training and testing datasets
+    pred = clf.predict(X)
+    print(accuracy_score(y, pred))
+    # print(pred)
+
+    def print_tree(root=None, indent="  "):
+        if root.value != None:
+            class_ = root.value
+            class_map = CLASS_MAP[class_]
+            print(f"class {int(class_)} - {class_map}")
+        else:
+            attribute = "x_" + str(root.feat_idx)
+            mapped_attribute = ATTRIBUTE_MAP[attribute]
+            print(
+                mapped_attribute,
+                "<=",
+                root.bounds,
+                ":",
+                format(root.info_gain, "0.4f"),
+            )
+            # print()
+            print(indent + "left: ", end="")
+            print_tree(root.left, indent + indent)
+            print(indent + "right: ", end="")
+            print_tree(root.right, indent + indent)
+
+    print_tree(clf.root)

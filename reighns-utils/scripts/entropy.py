@@ -64,7 +64,7 @@ def _entropy(
         assert _entropy(class_probabilities) == 0.9709505944546686
     """
 
-    assert np.sum(class_probabilities) == 1
+    # assert np.sum(class_probabilities) == 1
 
     entropy = 0
 
