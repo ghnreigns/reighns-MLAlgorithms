@@ -32,18 +32,18 @@ class DTNode:
     def __init__(
         self,
         feat_idx=None,
-        bounds=None,
+        threshold=None,
         left=None,
         right=None,
         info_gain=None,
-        value=None,
+        class_label=None,
     ):
         self.feat_idx = feat_idx
-        self.bounds = bounds
+        self.threshold = threshold
         self.left = left
         self.right = right
         self.info_gain = info_gain
-        self.value = value
+        self.class_label = class_label
 
 
 class DecisionTreeClassifier:
@@ -83,16 +83,16 @@ class DecisionTreeClassifier:
 
                 return DTNode(
                     best_split["feat_idx"],
-                    best_split["bounds"],
+                    best_split["threshold"],
                     left_tree,
                     right_tree,
                     best_split["info_gain"],
                 )
 
         y = list(y)
-        value = max(y, key=y.count)  # class label = majority count at leaves
+        class_label = max(y, key=y.count)  # class label = majority count at leaves
 
-        return DTNode(value=value)
+        return DTNode(class_label=class_label)
 
     def get_best_split(self, dataset, num_sample, num_feature):
 
@@ -134,7 +134,7 @@ class DecisionTreeClassifier:
 
                     if cur_info_gain > max_info_gain:
                         best_split["feat_idx"] = idx
-                        best_split["bounds"] = thresh
+                        best_split["threshold"] = thresh
                         best_split["left"] = data_left
                         best_split["right"] = data_right
                         best_split["info_gain"] = cur_info_gain
@@ -174,12 +174,12 @@ class DecisionTreeClassifier:
         self.root = self.build_tree(dataset)
 
     def make_pred(self, x, root):
-        if root.value != None:
-            return root.value
+        if root.class_label != None:
+            return root.class_label
 
         feat_val = x[root.feat_idx]
 
-        if feat_val <= root.bounds:
+        if feat_val <= root.threshold:
             return self.make_pred(x, root.left)
         else:
             return self.make_pred(x, root.right)
@@ -246,8 +246,8 @@ if __name__ == "__main__":
     # print(pred)
 
     def print_tree(root=None, indent="  "):
-        if root.value != None:
-            class_ = root.value
+        if root.class_label != None:
+            class_ = root.class_label
             class_map = CLASS_MAP[class_]
             print(f"class {int(class_)} - {class_map}")
         else:
@@ -256,7 +256,7 @@ if __name__ == "__main__":
             print(
                 mapped_attribute,
                 "<=",
-                root.bounds,
+                root.threshold,
                 ":",
                 format(root.info_gain, "0.4f"),
             )
