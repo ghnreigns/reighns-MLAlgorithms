@@ -1,21 +1,19 @@
-import numpy as np
-import pandas as pd
+import importlib
 import logging
 import os
+import pprint
 import sys  # noqa
 
+import numpy as np
+
+# import pandas as pd
+
 sys.path.append(os.getcwd())  # noqa
-from typing import *
-import pandas as pd
-import importlib
-
-Entropy = importlib.import_module(
-    "reighns-utils.scripts.entropy", package="reighns-utils"
-)
-
-import pprint
+Entropy = importlib.import_module("reighns-utils.scripts.entropy", package="reighns-utils")
 
 logging.basicConfig(filename="example.log", filemode="w", level=logging.DEBUG)
+
+
 """
 Decision Trees are greedy algorithms
 that maximise the current Information Gain
@@ -157,8 +155,7 @@ class DecisionTreeClassifier:
         weight_right = len(right) / len(parent)
 
         info_gain = self.get_entropy(parent) - (
-            weight_left * self.get_entropy(left)
-            + weight_right * self.get_entropy(right)
+            weight_left * self.get_entropy(left) + weight_right * self.get_entropy(right)
         )
 
         return info_gain
@@ -174,7 +171,7 @@ class DecisionTreeClassifier:
         self.root = self.build_tree(dataset)
 
     def make_pred(self, x, root):
-        if root.class_label != None:
+        if root.class_label is not None:
             return root.class_label
 
         feat_val = x[root.feat_idx]
@@ -190,11 +187,12 @@ class DecisionTreeClassifier:
 
 if __name__ == "__main__":
 
-    from sklearn.datasets import load_iris
-    from sklearn import tree
-    from sklearn.metrics import accuracy_score
     import random
     from random import shuffle
+
+    from sklearn import tree
+    from sklearn.datasets import load_iris
+    from sklearn.metrics import accuracy_score
 
     random.seed(1992)
 
@@ -246,7 +244,7 @@ if __name__ == "__main__":
     # print(pred)
 
     def print_tree(root=None, indent="  "):
-        if root.class_label != None:
+        if root.class_label is not None:
             class_ = root.class_label
             class_map = CLASS_MAP[class_]
             print(f"class {int(class_)} - {class_map}")

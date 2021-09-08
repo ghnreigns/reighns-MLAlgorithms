@@ -2,6 +2,9 @@
 venv_reighns_linear_regression/
 venv_reighns_mlalgo/
 
+# example log
+example.log
+
 # MacOS
 .DS_Store
 */.DS_Store
