@@ -12,7 +12,7 @@ DistanceMetrics = importlib.import_module(
 
 import numpy as np
 from sklearn.datasets import load_iris
-from sklearn.metrics import *
+from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 from sklearn.neighbors import KNeighborsClassifier
 
@@ -223,13 +223,13 @@ class reighnsKNN:
         self.mode = mode
 
     def _vote(self, neighbor_labels):
-        """ Return the most common class among the neighbor samples """
+        """Return the most common class among the neighbor samples"""
         frequency_counts = np.bincount(neighbor_labels.astype("int"))
         majority_vote = np.argmax(frequency_counts)
         return majority_vote
 
     def _mean(self, neighbor_labels):
-        """ Average the top K nearest neighbours in Regression """
+        """Average the top K nearest neighbours in Regression"""
         return sum(neighbor_labels) / len(neighbor_labels)
 
     def check_shape(self, X: np.ndarray = None, y: np.ndarray = None) -> None:
@@ -244,13 +244,9 @@ class reighnsKNN:
             assert len(X.shape) == 2, "The input X matrix should be a 2-d array!"
 
         if y is not None:
-            assert (
-                len(y.shape) == 1
-            ), "Both the y_true and y_pred array should be a 1-d array!"
+            assert len(y.shape) == 1, "Both the y_true and y_pred array should be a 1-d array!"
 
-    def predict(
-        self, X_train: np.ndarray, y_true: np.ndarray, X_test: np.ndarray
-    ) -> np.ndarray:
+    def predict(self, X_train: np.ndarray, y_true: np.ndarray, X_test: np.ndarray) -> np.ndarray:
         """The following steps details one cycle of classification. The regression follows just by changing the mode of the init.
 
         line 1-2: Check shape of input arrays.
@@ -293,9 +289,7 @@ class reighnsKNN:
                 [self.distance_metric(test_sample, x) for x in X_train]
             )[: self.k]
 
-            k_nearest_neighbors_classes = np.array(
-                [y_true[i] for i in k_nearest_neighbors_idx]
-            )
+            k_nearest_neighbors_classes = np.array([y_true[i] for i in k_nearest_neighbors_idx])
             if self.mode == "classification":
                 y_pred[i] = self._vote(k_nearest_neighbors_classes)
 
@@ -315,7 +309,6 @@ class reighnsKNN:
         Returns:
             p: np.ndarray: [description]
         """
-        pass
 
 
 if __name__ == "__main__":
@@ -330,15 +323,12 @@ if __name__ == "__main__":
     HN_KNN_CLASSIFICATION = reighnsKNN(
         k=3, distance_metric=DistanceMetrics.euclidean_distance, mode="classification"
     )
-    HN_CLASSIFICATION_PREDICTIONS = HN_KNN_CLASSIFICATION.predict(
-        X_train, y_train, X_test
-    )
+    HN_CLASSIFICATION_PREDICTIONS = HN_KNN_CLASSIFICATION.predict(X_train, y_train, X_test)
 
     print(HN_CLASSIFICATION_PREDICTIONS)
     print("\nSKLEARN Accuracy score : %.3f" % (sklearn_predictions * 100))
     print(
-        "\nHN Accuracy score : %.3f"
-        % (accuracy_score(y_test, HN_CLASSIFICATION_PREDICTIONS) * 100)
+        "\nHN Accuracy score : %.3f" % (accuracy_score(y_test, HN_CLASSIFICATION_PREDICTIONS) * 100)
     )
     print()
 
