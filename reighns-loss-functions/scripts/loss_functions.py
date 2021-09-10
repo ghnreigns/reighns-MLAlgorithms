@@ -33,10 +33,24 @@ def cross_entropy(y_true: np.ndarray, y_pred: np.ndarray, epsilon: float = 1e-12
 
     # we then average out the total loss across m samples, but we squeeze it to
     # make it a scalar; squeeze along axis = None since there is no column axix
-    average_cross_entropy_loss = np.squeeze(
-        total_cross_entropy_loss / n_samples, axis=None
-    )
+    average_cross_entropy_loss = np.squeeze(total_cross_entropy_loss / n_samples, axis=None)
 
     # cross_entropy_loss = -np.sum(y_true * np.log(y_pred)) / n_samples
     # print(np.isclose(average_cross_entropy_loss, cross_entropy_loss))
     return average_cross_entropy_loss
+
+
+def l1_loss():
+    pass
+
+
+def l2_loss(y_true: np.ndarray, y_pred: np.ndarray):
+    """Implements L2 Loss with $l2_loss(y_true, y_pred) = \sum_{i=1}^{m} (y_true-y_pred)^2$
+    Args:
+        y_true (np.ndarray): [description]
+        y_pred (np.ndarray): [description]
+    Returns:
+        [type]: [description]
+    """
+    l2_loss = np.sum(np.square(y_true - y_pred))
+    return l2_loss

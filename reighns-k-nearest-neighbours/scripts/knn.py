@@ -6,7 +6,7 @@ sys.path.append(os.getcwd())  # noqa
 import importlib
 
 DistanceMetrics = importlib.import_module(
-    "reighns-distance-metrics.distance", package="reighns-distance-metrics"
+    "reighns-distance-metrics.scripts.distance", package="reighns-distance-metrics.scripts"
 )
 
 
