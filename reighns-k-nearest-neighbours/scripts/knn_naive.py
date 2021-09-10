@@ -1,5 +1,4 @@
 import os
-import random
 import sys  # noqa
 
 sys.path.append(os.getcwd())  # noqa
@@ -12,6 +11,17 @@ DistanceMetrics = importlib.import_module(
 
 
 def KNN_example(X, y, x_test, k):
+    """[summary]
+
+    Args:
+        X ([type]): [description]
+        y ([type]): [description]
+        x_test ([type]): [description]
+        k ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
 
     # Example input
 
@@ -23,8 +33,8 @@ def KNN_example(X, y, x_test, k):
     # first, calculate the distance from the new point
     # to all other points in the dataset (x_test)
     distances = []  # stores (dist, class)
-    for i in range(len(X)):
-        d = DistanceMetrics.euclidean_distance(X[i], x_test)
+    for i, x_i in enumerate(X):
+        d = DistanceMetrics.euclidean_distance(x_i, x_test)
         distances.append((d, y[i]))
 
     # second, sort and then store the k nearest neighbors
