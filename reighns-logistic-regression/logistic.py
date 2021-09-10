@@ -16,15 +16,18 @@ sys.path.append(os.getcwd())  # noqa
 import importlib
 
 LossFunction = importlib.import_module(
-    "reighns-loss-functions.loss_functions", package="reighns-loss-functions"
+    "reighns-loss-functions.scripts.loss_functions", package="reighns-loss-functions.scripts"
 )
 
 
 ActivationFunction = importlib.import_module(
-    "reighns-activation-functions.activations", package="reighns-activation-functions"
+    "reighns-activation-functions.scripts.activations",
+    package="reighns-activation-functions.scripts",
 )
 
-Metric = importlib.import_module("reighns-metrics.metrics", package="reighns-metrics")
+Metric = importlib.import_module(
+    "reighns-metrics.scripts.metrics", package="reighns-metrics.scripts"
+)
 
 
 class MyLogisticRegression:
@@ -247,17 +250,13 @@ if __name__ == "__main__":
 
     X, y = sklearn.datasets.load_breast_cancer(return_X_y=True)
 
-    X_train, X_val, y_train, y_val = train_test_split(
-        X, y, test_size=0.2, random_state=1930
-    )
+    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=1930)
     print(y_train.shape)
     sc = StandardScaler()
     X_train = sc.fit_transform(X_train)
     X_val = sc.transform(X_val)
 
-    logreg = LogisticRegression(
-        fit_intercept=True, random_state=1930, solver="sag", max_iter=1000
-    )
+    logreg = LogisticRegression(fit_intercept=True, random_state=1930, solver="sag", max_iter=1000)
     logreg.fit(X_train, y_train)
     print(logreg.coef_, logreg.intercept_)
     print("SKLEARN Validation Accuracy: {}".format(logreg.score(X_val, y_val)))
@@ -268,9 +267,7 @@ if __name__ == "__main__":
     print(mylog.coef_)
     logits, preds = mylog.predict(X_val)
 
-    print(
-        "\nAccuracy score : %f" % (sklearn.metrics.accuracy_score(y_val, preds) * 100)
-    )
+    print("\nAccuracy score : %f" % (sklearn.metrics.accuracy_score(y_val, preds) * 100))
     print("Recall score : %f" % (sklearn.metrics.recall_score(y_val, preds) * 100))
     print("ROC score : %f\n" % (sklearn.metrics.roc_auc_score(y_val, preds) * 100))
     print(sklearn.metrics.confusion_matrix(y_val, preds))

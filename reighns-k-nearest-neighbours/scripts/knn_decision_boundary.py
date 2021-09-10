@@ -1,95 +1,64 @@
-from sklearn import neighbors, datasets
-from matplotlib.colors import ListedColormap
-import seaborn as sns
-import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-
-"""
-For each point in the mesh grid, we perform a prediction, and plot it.
-As h-> 0, the predictions => infinity, and can therefore form a decision boundary.
-So xx and yy are combination of 2 features (hypothetically) generated from the min of x1 x2 and max x1 x2
-Then we take the cross product combination of xx and yy to "make predictions".
-
-In our simplfied example, 
-"""
-
-clf_data = np.array(
-    [
-        [-1, 1, 0],
-        [1, -1, 0],
-        [0, 2, 0],
-        [2, 2, 0],
-        [1, 0, 1],
-        [0, 1, 1],
-        [1, 2, 1],
-    ]
-)
-
-X = clf_data[:, 0:2].reshape(-1, 2)
-print(X)
-y = clf_data[:, 2]
-y_test = np.array([[1, 1]])
+import matplotlib.pyplot as plt
 
 
-n_neighbors = 1
-clf = neighbors.KNeighborsClassifier(n_neighbors, weights="uniform")
-clf.fit(X, y)
-preds = clf.predict(y_test)
-print(preds)
+def plot_decision_boundaries(X, y, model_class, **model_params):
+    """
+    Function to plot the decision boundaries of a classification model.
+    This uses just the first two columns of the data for fitting
+    the model as we need to find the predicted value for every point in
+    scatter plot.
+    Arguments:
+            X: Feature data as a NumPy-type array.
+            y: Label data as a NumPy-type array.
+            model_class: A Scikit-learn ML estimator class
+            e.g. GaussianNB (imported from sklearn.naive_bayes) or
+            LogisticRegression (imported from sklearn.linear_model)
+            **model_params: Model parameters to be passed on to the ML estimator
 
-h = 0.5  # step size in the mesh
-# Create color maps
-cmap_light = ListedColormap(["orange", "cyan"])
-cmap_bold = ["r", "g"]
+    Typical code example:
+            plt.figure()
+            plt.title("KNN decision boundary with neighbros: 5",fontsize=16)
+            plot_decision_boundaries(X_train,y_train,KNeighborsClassifier,n_neighbors=5)
+            plt.show()
+    """
+    try:
+        X = np.array(X)
+        y = np.array(y).flatten()
+    except:
+        print("Coercing input data to NumPy arrays failed")
+    # Reduces to the first two columns of data
+    reduced_data = X[:, :2]
+    # Instantiate the model object
+    model = model_class(**model_params)
+    # Fits the model with the reduced data
+    model.fit(reduced_data, y)
 
-# Plot the decision boundary. For that, we will assign a color to each
-# point in the mesh [x_min, x_max]x[y_min, y_max].
-x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
-y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
-print(np.arange(x_min, x_max, h))
+    # Step size of the mesh. Decrease to increase the quality of the VQ.
+    h = 0.02  # point in the mesh [x_min, m_max]x[y_min, y_max].
 
-xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
-print(f"xx and yy: {xx, yy}")
-print(f"xx and yy shape: {xx.shape, yy.shape}")
+    # Plot the decision boundary. For that, we will assign a color to each
+    x_min, x_max = reduced_data[:, 0].min() - 1, reduced_data[:, 0].max() + 1
+    y_min, y_max = reduced_data[:, 1].min() - 1, reduced_data[:, 1].max() + 1
+    # Meshgrid creation
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
 
-mesh_grid = plt.plot(xx, yy, marker=".", color="k", linestyle="none")
+    # Obtain labels for each point in mesh using the model.
+    Z = model.predict(np.c_[xx.ravel(), yy.ravel()])
 
-print(f"np.c_[xx.ravel(), yy.ravel()] subset is {np.c_[xx.ravel(), yy.ravel()]}")
-print(f"np.c_[xx.ravel(), yy.ravel()] shape is {np.c_[xx.ravel(), yy.ravel()].shape}")
+    x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
+    y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
+    xx, yy = np.meshgrid(np.arange(x_min, x_max, 0.1), np.arange(y_min, y_max, 0.1))
 
-Z = clf.predict(np.c_[xx.ravel(), yy.ravel()])
-print(f"predictions: {Z}, shape of predictions: {Z.shape}")
+    # Predictions to obtain the classification results
+    Z = model.predict(np.c_[xx.ravel(), yy.ravel()]).reshape(xx.shape)
 
-# Put the result into a color plot
-print(xx.shape)
-Z = Z.reshape(xx.shape)
-print(Z)
-contour_decision_boundary = plt.figure(figsize=(8, 6))
-plt.contourf(xx, yy, Z, cmap=cmap_light)
-# fig_contour = contour_decision_boundary.get_figure()
-# fig_contour.savefig('contour_decision_boundary.png', dpi=400)
-
-# Plot also the training points
-for k_neighbours in range(1, 8, 2):
-    data_plot = sns.scatterplot(
-        x=X[:, 0],
-        y=X[:, 1],
-        hue=y,
-        palette=cmap_bold,
-        alpha=1.0,
-        edgecolor="black",
-    )
-    plt.xlim(xx.min(), xx.max())
-    plt.ylim(yy.min(), yy.max())
-    plt.title(
-        "2-Class classification (k = %i, weights = '%s')" % (k_neighbours, "uniform")
-    )
-    # plt.xlabel(iris.feature_names[0])
-    # plt.ylabel(iris.feature_names[1])
-
-    # figure = data_plot.get_figure()
-    # figure.savefig(f'knn_plot_{k_neighbours}.png', dpi=400)
-    # plt.clf()
+    # Plotting
+    plt.contourf(xx, yy, Z, alpha=0.4)
+    plt.scatter(X[:, 0], X[:, 1], c=y, alpha=0.8)
+    plt.xlabel("Feature-1", fontsize=15)
+    plt.ylabel("Feature-2", fontsize=15)
+    plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
     plt.show()
-    break
+    return plt
