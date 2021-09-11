@@ -39,7 +39,7 @@ class reighnsLinearRegression:
         has_intercept: bool = True,
         solver: str = "Closed Form Solution",
         learning_rate: float = 0.1,
-        loss_function: LossFunction = LossFunction.l2_loss,
+        loss_function: LossFunction = LossFunction.l2_loss(),
         regularization: int = None,
         num_epochs: int = 1000,
     ):
@@ -187,13 +187,16 @@ class reighnsLinearRegression:
                 assert y_pred.shape == (n_samples, 1)
                 assert y_true.shape == (n_samples, 1)
 
-                loss = self.loss_function(y_true, y_pred)
+                loss = self.loss_function(y_true=y_true, y_pred=y_pred)
 
                 # Here we knowingly used l2 loss gradient vector
                 # where it is represented as $\nabla(\hat{\beta}) = [\nabla(\beta_1), ...., \nabla(\beta_n)]
-                GRADIENT_VECTOR = (2 / n_samples) * -(y_true - y_pred).T @ X
+
+                gradient_vector = (2 / n_samples) * self.loss_function.gradient(
+                    y_true=y_true, y_pred=y_pred, X=X
+                )
                 # yet another vectorized operation
-                self.optimal_betas -= self.learning_rate * GRADIENT_VECTOR
+                self.optimal_betas -= self.learning_rate * gradient_vector
                 if epoch % 100 == 0:
                     print("EPOCH: {} | MSE_LOSS : {}".format(epoch, loss))
                     self.loss_history.append(loss)
