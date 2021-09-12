@@ -466,7 +466,7 @@ if __name__ == "__main__":
             )
             total_test_error += total_squared_error_for_current_hypothesis
 
-        expected_test_error = total_test_error / num_simulations
+        expected_test_error_ = total_test_error / num_simulations
 
         ### Bias ###
 
@@ -509,7 +509,7 @@ if __name__ == "__main__":
         variance = total_error_deviated_from_average_hypothesis / num_simulations
 
         # variance = np.sum((all_predictions - average_hypothesis_predictions) ** 2) / num_simulations
-        print("Expected Test Error", expected_test_error)
+        print("Expected Test Error", expected_test_error_)
         print("Bias Squared", bias)
         print("Variance", variance)
         print(
