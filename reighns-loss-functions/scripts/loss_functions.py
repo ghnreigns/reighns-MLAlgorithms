@@ -45,7 +45,7 @@ def l1_loss():
 
 
 class l2_loss:
-    """L2 Loss"""
+    """L2 Loss (total l2 loss, to get mean l2_loss, please divide by the number of samples)"""
 
     # def __init__(self, y_true: np.ndarray, y_pred: np.ndarray, X: np.ndarray = None) -> None:
     #     self.y_true = y_true
