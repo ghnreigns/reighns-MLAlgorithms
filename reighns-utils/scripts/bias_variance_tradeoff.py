@@ -1,12 +1,8 @@
 import numpy as np
-from typing import List
-from scipy.interpolate import interp1d
 from sklearn.linear_model import LinearRegression
-from sklearn.metrics import mean_squared_error
 from sklearn.preprocessing import PolynomialFeatures
-from numpy import polyfit
 from sklearn.pipeline import make_pipeline
-from typing import *
+from typing import Dict
 
 
 np.random.seed(1992)
@@ -164,7 +160,7 @@ def get_predictions(f_true, estimator, num_simulations, num_samples, Y_test):
     """
 
     num_y_test = Y_test.shape[0]  # num of samples in y_test
-    num_simulations = num_simulations  # just for emphasis
+    # num_simulations = num_simulations  # just for emphasis
 
     hypothesis_dict: Dict = {}
 
