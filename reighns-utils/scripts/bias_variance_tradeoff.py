@@ -151,7 +151,7 @@ def expected_test_error(f_true, estimator, num_simulations, num_samples, Y_test)
     return expected_test_error
 
 
-def get_predictions(f_true, estimator, num_simulations, num_samples, Y_test):
+def get_predictions(f_true, estimator, num_simulations, num_samples, X_test, Y_test):
     """
     $$
     \widehat{\text{MSE}}\left(f(0.90), \hat{f}_k(0.90)\right) = \frac{1}{n_{\texttt{sims}}}\sum_{i = 1}^{n_{\texttt{sims}}} \left(f(0.90) - \hat{f}_k^{[i]}(0.90) \right)^2
@@ -189,91 +189,218 @@ def get_predictions(f_true, estimator, num_simulations, num_samples, Y_test):
     all_preds = np.ones(
         shape=(num_simulations, num_y_test)
     )  # create matrix of num_sim x num_y_test size where each row is the predictions of y_test for hypothesis_i
+
     for index, (hypothesis, hypothesis_predictions) in enumerate(hypothesis_dict.items()):
+
+        hypothesis_predictions = hypothesis_predictions.reshape(-1)
+        # print(hypothesis_predictions.shape)
+        # print(all_preds[index].shape)
         all_preds[index] = hypothesis_predictions
 
     return hypothesis_dict, all_preds
 
 
 if __name__ == "__main__":
-    np.random.seed(1992)
-    # we choose 4 Hypothesis Set for comparison. Please note this represents 4 different models of choice we choose. In order to avoid confusion, we will try to call the "models" in each Hypothesis Set "hypothesis".
-    num_simulations = 250
-    num_samples = 100
-    X_test = np.array([[0.9]])  # 0.9 Note carefully we are using only 1 and only 1 test point here.
-    # 0.81 note here has no noise as we are not technically generating from the distribution.
-    Y_test = f_true(X_test)
-    num_y_test = Y_test.shape[0]
 
-    # h_{\theta}(x) = \theta_{n}(x^n) + \theta_{n-1}(x^(n-1)) + ... + \theta_{0} = \sum_{j=0}^{n} \theta_{j}x^{j}
+    def one_test_point():
+        # only using on one point
+        np.random.seed(1992)
+        # we choose 4 Hypothesis Set for comparison. Please note this represents 4 different models of choice we choose. In order to avoid confusion, we will try to call the "models" in each Hypothesis Set "hypothesis".
+        num_simulations = 250
+        num_samples = 100
+        X_test = np.array(
+            [[0.9]]
+        )  # 0.9 Note carefully we are using only 1 and only 1 test point here.
 
-    polynomial_degree_1 = make_pipeline(PolynomialFeatures(degree=1), LinearRegression())
+        # 0.81 note here has no noise as we are not technically generating from the distribution.
+        Y_test = f_true(X_test)
+        num_y_test = Y_test.shape[0]
 
-    # expected_test_error_p1 = expected_test_error(
-    #     f_true=f_true,
-    #     estimator=polynomial_degree_1,
-    #     num_simulations=num_simulations,
-    #     num_samples=num_samples,
-    #     Y_test=Y_test,
-    # )
+        # h_{\theta}(x) = \theta_{n}(x^n) + \theta_{n-1}(x^(n-1)) + ... + \theta_{0} = \sum_{j=0}^{n} \theta_{j}x^{j}
 
-    # I decided to follow STAT432 style and get all predictions from various hypothesis first as it is cleaner.
-    all_predictions_dict, all_predictions = get_predictions(
-        f_true=f_true,
-        estimator=polynomial_degree_1,
-        num_simulations=num_simulations,
-        num_samples=num_samples,
-        Y_test=Y_test,
-    )
+        polynomial_degree_1 = make_pipeline(PolynomialFeatures(degree=1), LinearRegression())
 
-    assert all_predictions.shape == (num_simulations, num_y_test)
-    # our h_bar or \bar{h} - which plays an important role in Bias-Variance Tradeoff
-    average_hypothesis_predictions = np.mean(all_predictions, axis=0)
+        # expected_test_error_p1 = expected_test_error(
+        #     f_true=f_true,
+        #     estimator=polynomial_degree_1,
+        #     num_simulations=num_simulations,
+        #     num_samples=num_samples,
+        #     Y_test=Y_test,
+        # )
 
-    # Expected MSE(f_true(0.9), h_bar(0.9)) = \dfrac{1}{n_sim} \sum_{i=1}^{n_sims} 1/num_y_test (f_true(0.9) - h_bar(0.9)) ** 2
-    total_test_error = 0
-    for i in range(num_simulations):
-        total_squared_error_for_current_hypothesis = (Y_test - all_predictions[i]) ** 2
-
-        # rmb to divide by num of points in y_test
-        total_squared_error_for_current_hypothesis = (
-            total_squared_error_for_current_hypothesis / num_y_test
-        )
-        total_test_error += total_squared_error_for_current_hypothesis
-
-    expected_test_error = total_test_error / num_simulations
-
-    # Bias : $$
-    #        \widehat{\text{bias}} \left(\hat{f}(0.90) \right)  = \frac{1}{n_{\texttt{sims}}}\sum_{i = 1}^{n_{\texttt{sims}}} \left(\hat{f}_k^{[i]}(0.90) \right) - f(0.90)
-    #        $$
-    # This is just the deviation of our average hypothesis predictions from the ground truth Y_test
-    # Remember to square it!
-    bias = average_hypothesis_predictions - Y_test
-
-    # Variance:
-    # $$
-    # \widehat{\text{var}} \left(\hat{f}(0.90) \right) = \frac{1}{n_{\texttt{sims}}}\sum_{i = 1}^{n_{\texttt{sims}}} \left(\hat{f}_k^{[i]}(0.90) - \frac{1}{n_{\texttt{sims}}}\sum_{i = 1}^{n_{\texttt{sims}}}\hat{f}_k^{[i]}(0.90) \right)^2
-    # $$
-    # This intuitively just illustrates for each prediction made by each hypothesis, how much are they deviating from the average hypothesis predictions?
-    # To quantify this,
-    # 1. total_error_deviated_from_average_hypothesis = add up all deviations from h_i from \bar{h}
-
-    total_error_deviated_from_average_hypothesis = 0
-    for i in range(num_simulations):
-        total_squared_error_for_current_hypothesis_vs_average_hypothesis = (
-            all_predictions[i] - average_hypothesis_predictions
-        ) ** 2
-        total_squared_error_for_current_hypothesis_vs_average_hypothesis = (
-            total_squared_error_for_current_hypothesis_vs_average_hypothesis / num_y_test
-        )
-        total_error_deviated_from_average_hypothesis += (
-            total_squared_error_for_current_hypothesis_vs_average_hypothesis
+        # I decided to follow STAT432 style and get all predictions from various hypothesis first as it is cleaner.
+        all_predictions_dict, all_predictions = get_predictions(
+            f_true=f_true,
+            estimator=polynomial_degree_1,
+            num_simulations=num_simulations,
+            num_samples=num_samples,
+            Y_test=Y_test,
+            X_test=X_test,
         )
 
-    variance = total_error_deviated_from_average_hypothesis / num_simulations
+        assert all_predictions.shape == (num_simulations, num_y_test)
+        # our h_bar or \bar{h} - which plays an important role in Bias-Variance Tradeoff
+        average_hypothesis_predictions = np.mean(all_predictions, axis=0)
+        print("average hypothesis", average_hypothesis_predictions)
 
-    # variance = np.sum((all_predictions - average_hypothesis_predictions) ** 2) / num_simulations
-    print(expected_test_error)
-    print(bias ** 2)
-    print(variance)
-    print(bias ** 2 + variance)  # see this matches perfectly with the decomposition.
+        # Expected MSE(f_true(0.9), h_bar(0.9)) = \dfrac{1}{n_sim} \sum_{i=1}^{n_sims} 1/num_y_test (f_true(0.9) - h_bar(0.9)) ** 2
+        total_test_error = 0
+        for i in range(num_simulations):
+            total_squared_error_for_current_hypothesis = (Y_test - all_predictions[i]) ** 2
+
+            # rmb to divide by num of points in y_test
+            total_squared_error_for_current_hypothesis = (
+                total_squared_error_for_current_hypothesis / num_y_test
+            )
+            total_test_error += total_squared_error_for_current_hypothesis
+
+        expected_test_error = total_test_error / num_simulations
+
+        # Bias : $$
+        #        \widehat{\text{bias}} \left(\hat{f}(0.90) \right)  = \frac{1}{n_{\texttt{sims}}}\sum_{i = 1}^{n_{\texttt{sims}}} \left(\hat{f}_k^{[i]}(0.90) \right) - f(0.90)
+        #        $$
+        # This is just the deviation of our average hypothesis predictions from the ground truth Y_test
+        # Remember to square it!
+        bias = average_hypothesis_predictions - Y_test
+
+        # Variance:
+        # $$
+        # \widehat{\text{var}} \left(\hat{f}(0.90) \right) = \frac{1}{n_{\texttt{sims}}}\sum_{i = 1}^{n_{\texttt{sims}}} \left(\hat{f}_k^{[i]}(0.90) - \frac{1}{n_{\texttt{sims}}}\sum_{i = 1}^{n_{\texttt{sims}}}\hat{f}_k^{[i]}(0.90) \right)^2
+        # $$
+        # This intuitively just illustrates for each prediction made by each hypothesis, how much are they deviating from the average hypothesis predictions?
+        # To quantify this,
+        # 1. total_error_deviated_from_average_hypothesis = add up all deviations from h_i from \bar{h}
+
+        total_error_deviated_from_average_hypothesis = 0
+        for i in range(num_simulations):
+            total_squared_error_for_current_hypothesis_vs_average_hypothesis = (
+                all_predictions[i] - average_hypothesis_predictions
+            ) ** 2
+            total_squared_error_for_current_hypothesis_vs_average_hypothesis = (
+                total_squared_error_for_current_hypothesis_vs_average_hypothesis / num_y_test
+            )
+            total_error_deviated_from_average_hypothesis += (
+                total_squared_error_for_current_hypothesis_vs_average_hypothesis
+            )
+
+        variance = total_error_deviated_from_average_hypothesis / num_simulations
+
+        # variance = np.sum((all_predictions - average_hypothesis_predictions) ** 2) / num_simulations
+        print(expected_test_error)
+        print(bias ** 2)
+        print(variance)
+        print(bias ** 2 + variance)  # see this matches perfectly with the decomposition.
+
+    def two_test_point():
+        # only using on one point
+        np.random.seed(1992)
+        # we choose 4 Hypothesis Set for comparison. Please note this represents 4 different models of choice we choose. In order to avoid confusion, we will try to call the "models" in each Hypothesis Set "hypothesis".
+        num_simulations = 2
+        num_samples = 3
+        X_test = np.array(
+            [[0.9], [1.2]]
+        )  # 0.9 Note carefully we are using only 1 and only 1 test point here.
+
+        # 0.81 note here has no noise as we are not technically generating from the distribution.
+        Y_test = f_true(X_test)
+        num_y_test = Y_test.shape[0]
+
+        # h_{\theta}(x) = \theta_{n}(x^n) + \theta_{n-1}(x^(n-1)) + ... + \theta_{0} = \sum_{j=0}^{n} \theta_{j}x^{j}
+
+        polynomial_degree_1 = make_pipeline(PolynomialFeatures(degree=1), LinearRegression())
+
+        # expected_test_error_p1 = expected_test_error(
+        #     f_true=f_true,
+        #     estimator=polynomial_degree_1,
+        #     num_simulations=num_simulations,
+        #     num_samples=num_samples,
+        #     Y_test=Y_test,
+        # )
+
+        # I decided to follow STAT432 style and get all predictions from various hypothesis first as it is cleaner.
+        all_predictions_dict, all_predictions = get_predictions(
+            f_true=f_true,
+            estimator=polynomial_degree_1,
+            num_simulations=num_simulations,
+            num_samples=num_samples,
+            Y_test=Y_test,
+            X_test=X_test,
+        )
+
+        assert all_predictions.shape == (num_simulations, num_y_test)
+        # our h_bar or \bar{h} - which plays an important role in Bias-Variance Tradeoff
+
+        average_hypothesis_predictions = np.mean(all_predictions, axis=0)
+        print("Average Hypothesis", average_hypothesis_predictions)
+
+        # Expected MSE(f_true(0.9), h_bar(0.9)) = \dfrac{1}{n_sim} \sum_{i=1}^{n_sims} 1/num_y_test (f_true(0.9) - h_bar(0.9)) ** 2
+        total_test_error = 0
+        for i in range(num_simulations):
+            # Y_test = [[0.81], [1.44]]
+            # all_predictions[0] = [[0.9], [1.4]]
+            # total_squared_error_for_current_hypothesis = (Y_test - all_predictions[0]) ** 2 = [[-0.09], [0.04]] ** 2 = [[0.081], [0.016]]
+            # 0.081 is the error on the first point, whereas 0.016 is the error on the second point.
+            # Thus you need to sum them up by calling np.sum()
+
+            total_squared_error_for_current_hypothesis = np.sum(
+                (Y_test - all_predictions[i].reshape(Y_test.shape)) ** 2
+            )
+            # rmb to divide by num of points in y_test
+            total_squared_error_for_current_hypothesis = (
+                total_squared_error_for_current_hypothesis / num_y_test
+            )
+            total_test_error += total_squared_error_for_current_hypothesis
+
+        expected_test_error = total_test_error / num_simulations
+
+        # Bias : $$
+        #        \widehat{\text{bias}} \left(\hat{f}(0.90) \right)  = \frac{1}{n_{\texttt{sims}}}\sum_{i = 1}^{n_{\texttt{sims}}} \left(\hat{f}_k^{[i]}(0.90) \right) - f(0.90)
+        #        $$
+        # This is just the deviation of our average hypothesis predictions from the ground truth Y_test
+        # Remember to square it!
+
+        # Same example:
+        # average_hypothesis_predictions = [[0.80349123], [0.79944328]]
+        # Y_test = [[0.81], [1.44]]
+        # Bias for each prediction = [[-0.0065], [-0.64]]
+        # Bias =  absolute error for average prediction vs the ground truth Y_test so you just add the error up for each prediction
+        # Bias = np.sum(average_hypothesis_predictions - Y_test)
+
+        bias = (
+            np.sum((average_hypothesis_predictions.reshape(Y_test.shape) - Y_test) ** 2)
+            / num_y_test
+        )
+
+        # Variance:
+        # $$
+        # \widehat{\text{var}} \left(\hat{f}(0.90) \right) = \frac{1}{n_{\texttt{sims}}}\sum_{i = 1}^{n_{\texttt{sims}}} \left(\hat{f}_k^{[i]}(0.90) - \frac{1}{n_{\texttt{sims}}}\sum_{i = 1}^{n_{\texttt{sims}}}\hat{f}_k^{[i]}(0.90) \right)^2
+        # $$
+        # This intuitively just illustrates for each prediction made by each hypothesis, how much are they deviating from the average hypothesis predictions?
+        # To quantify this,
+        # 1. total_error_deviated_from_average_hypothesis = add up all deviations from h_i from \bar{h}
+
+        total_error_deviated_from_average_hypothesis = 0
+        for i in range(num_simulations):
+            total_squared_error_for_current_hypothesis_vs_average_hypothesis = np.sum(
+                (all_predictions[i] - average_hypothesis_predictions) ** 2
+            )
+
+            total_squared_error_for_current_hypothesis_vs_average_hypothesis = (
+                total_squared_error_for_current_hypothesis_vs_average_hypothesis / num_y_test
+            )
+            total_error_deviated_from_average_hypothesis += (
+                total_squared_error_for_current_hypothesis_vs_average_hypothesis
+            )
+
+        variance = total_error_deviated_from_average_hypothesis / num_simulations
+
+        # variance = np.sum((all_predictions - average_hypothesis_predictions) ** 2) / num_simulations
+        print("Expected Test Error", expected_test_error)
+        print("Bias Squared", bias)
+        print("Variance", variance)
+        print(
+            "Expected Test Error = Bias Squared + Variance = ", bias + variance
+        )  # see this matches perfectly with the decomposition.
+
+    # one_test_point()
+    two_test_point()
