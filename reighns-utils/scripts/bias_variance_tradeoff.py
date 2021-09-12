@@ -100,7 +100,7 @@ def get_total_mse(y_true: np.ndarray, y_pred: np.ndarray):
     return total_mse
 
 
-def expected_test_error(f_true, estimator, num_simulations, num_samples, Y_test):
+def expected_test_error(f_true, estimator, num_simulations, num_samples, Y_test, X_test):
     """
     $$
     \widehat{\text{MSE}}\left(f(0.90), \hat{f}_k(0.90)\right) = \frac{1}{n_{\texttt{sims}}}\sum_{i = 1}^{n_{\texttt{sims}}} \left(f(0.90) - \hat{f}_k^{[i]}(0.90) \right)^2
@@ -226,6 +226,7 @@ if __name__ == "__main__":
         #     num_simulations=num_simulations,
         #     num_samples=num_samples,
         #     Y_test=Y_test,
+        #     X_test= X_test
         # )
 
         # I decided to follow STAT432 style and get all predictions from various hypothesis first as it is cleaner.
@@ -246,7 +247,9 @@ if __name__ == "__main__":
         # Expected MSE(f_true(0.9), h_bar(0.9)) = \dfrac{1}{n_sim} \sum_{i=1}^{n_sims} 1/num_y_test (f_true(0.9) - h_bar(0.9)) ** 2
         total_test_error = 0
         for i in range(num_simulations):
-            total_squared_error_for_current_hypothesis = (Y_test - all_predictions[i]) ** 2
+            total_squared_error_for_current_hypothesis = (
+                Y_test - all_predictions[i].reshape(Y_test.shape)
+            ) ** 2
 
             # rmb to divide by num of points in y_test
             total_squared_error_for_current_hypothesis = (
@@ -261,7 +264,7 @@ if __name__ == "__main__":
         #        $$
         # This is just the deviation of our average hypothesis predictions from the ground truth Y_test
         # Remember to square it!
-        bias = average_hypothesis_predictions - Y_test
+        bias = average_hypothesis_predictions.reshape(Y_test.shape) - Y_test
 
         # Variance:
         # $$
@@ -402,5 +405,116 @@ if __name__ == "__main__":
             "Expected Test Error = Bias Squared + Variance = ", bias + variance
         )  # see this matches perfectly with the decomposition.
 
-    # one_test_point()
-    two_test_point()
+    def two_test_point_cleaned():
+        # only using on one point
+        np.random.seed(1992)
+
+        num_simulations = 2
+        num_samples = 3
+        X_test = np.array([[0.9], [1.2]])
+        Y_test = f_true(X_test)
+        num_y_test = Y_test.shape[0]
+
+        polynomial_degree_1 = make_pipeline(PolynomialFeatures(degree=1), LinearRegression())
+
+        # I decided to follow STAT432 style and get all predictions from various hypothesis first as it is cleaner.
+        all_predictions_dict, all_predictions = get_predictions(
+            f_true=f_true,
+            estimator=polynomial_degree_1,
+            num_simulations=num_simulations,
+            num_samples=num_samples,
+            Y_test=Y_test,
+            X_test=X_test,
+        )
+
+        # Y_test = [[0.81], [1.44]]
+        # X_test = [[0.9], [1.2]]
+        # We ran 2 simulations, so we have 2 hypothesis
+        # h1 = [1.07657572 1.13156252]
+        # h2 = [3.08344394 4.1038925 ]
+        # Stacking together we have
+        # h1 and h2 = [[1.07657572 1.13156252]
+        #               [3.08344394 4.1038925 ]]
+
+        # h_bar = [2.08000983 2.61772751] which is gotten by (h1 + h2)/2
+        # Note h_bar's shape is same as Y_test shape, h_bar[0] is average best prediction for 0.9 and h_bar[1] is best prediction for 1.2
+
+        assert all_predictions.shape == (num_simulations, num_y_test)
+
+        average_hypothesis_predictions = np.mean(all_predictions, axis=0)
+        print("Average Hypothesis", average_hypothesis_predictions)
+
+        ### Expected Test Error ###
+        # for each hypothesis, we use this hypothesis to predict on X_test, we get h1 first, and we find the mean squared difference of hi and Y_test
+        # MSE(h1, Y_test) = np.sum([[0.07106262], [0.09513368]]) =  0.1661962942345044 where 0.07106262 is the mean squared error of 0.81 and 1.0765, 0.09513368 is the mean squared error of 1.44 and 1.13156252
+        # MEAN_MSE(h1, Y_test) = 0.1661962942345044 / 2 = 0.0830981471172522
+        # MSE(h2, Y_test) = np.sum([[5.16854734], [7.09632328]]) =  12.264870610777585
+        # MEAN_MSE(h2, Y_test) = 12.264870610777585 / 2 = 6.132435305388793
+
+        # Now we have both mean MSE for h1 and h2 with respect to Y_test
+        # We add both up and divide the total MSE by the number of simulations we have, as we are taking expectation of possible D
+        # Expected MSE = (0.0830981471172522 + 6.132435305388793) / num_simulations = 3.1077667262530224
+
+        total_test_error = 0
+        for i in range(num_simulations):
+            total_squared_error_for_current_hypothesis = np.sum(
+                (Y_test - all_predictions[i].reshape(Y_test.shape)) ** 2
+            )
+
+            total_squared_error_for_current_hypothesis = (
+                total_squared_error_for_current_hypothesis / num_y_test
+            )
+            total_test_error += total_squared_error_for_current_hypothesis
+
+        expected_test_error = total_test_error / num_simulations
+
+        ### Bias ###
+
+        # Recall h_bar = [2.08000983 2.61772751]
+        # We want to calculate the mean squared error of h_bar and Y_test
+        # And what is the definition of MEAN squared error again? It is the mean of the squared errors, so please do not forget to divide the number of y_test after summing the squared error.
+        # (h_bar - Y_test)**2 = [[1.61292497], [1.3870421]] means bias for point 0.9 is 1.6129 and for point 1.2 is 1.387
+        # We then sum the above to get the squared error, and divide by the number of points we have to get the MEAN squared error
+
+        bias = (
+            np.sum((average_hypothesis_predictions.reshape(Y_test.shape) - Y_test) ** 2)
+            / num_y_test
+        )
+
+        ### Variance ###
+
+        # Recall h_bar = [2.08000983 2.61772751]
+        # We want to calculate the mean squared error of h_bar and h1, h2, h3
+        # MSE(h1, h_bar) = 1.6077...
+        # MSE(h2, h_bar) = 1.6077...
+
+        # Add up all the MSE(hi, h_bar) = sum(h1, h2, ...)
+        # Lastly, divide by the number of simulations.
+
+        total_error_deviated_from_average_hypothesis = 0
+        for i in range(num_simulations):
+
+            total_squared_error_for_current_hypothesis_vs_average_hypothesis = np.sum(
+                (all_predictions[i] - average_hypothesis_predictions) ** 2
+            )
+
+            total_squared_error_for_current_hypothesis_vs_average_hypothesis = (
+                total_squared_error_for_current_hypothesis_vs_average_hypothesis / num_y_test
+            )
+
+            total_error_deviated_from_average_hypothesis += (
+                total_squared_error_for_current_hypothesis_vs_average_hypothesis
+            )
+
+        variance = total_error_deviated_from_average_hypothesis / num_simulations
+
+        # variance = np.sum((all_predictions - average_hypothesis_predictions) ** 2) / num_simulations
+        print("Expected Test Error", expected_test_error)
+        print("Bias Squared", bias)
+        print("Variance", variance)
+        print(
+            "Expected Test Error = Bias Squared + Variance = ", bias + variance
+        )  # see this matches perfectly with the decomposition.
+
+    one_test_point()
+    two_test_point_cleaned()
