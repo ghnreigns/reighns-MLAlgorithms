@@ -221,6 +221,7 @@ if __name__ == "__main__":
     #     Y_test=Y_test,
     # )
 
+    # I decided to follow STAT432 style and get all predictions from various hypothesis first as it is cleaner.
     all_predictions_dict, all_predictions = get_predictions(
         f_true=f_true,
         estimator=polynomial_degree_1,
@@ -237,6 +238,8 @@ if __name__ == "__main__":
     total_test_error = 0
     for i in range(num_simulations):
         total_squared_error_for_current_hypothesis = (Y_test - all_predictions[i]) ** 2
+
+        # rmb to divide by num of points in y_test
         total_squared_error_for_current_hypothesis = (
             total_squared_error_for_current_hypothesis / num_y_test
         )
@@ -244,9 +247,37 @@ if __name__ == "__main__":
 
     expected_test_error = total_test_error / num_simulations
 
+    # Bias : $$
+    #        \widehat{\text{bias}} \left(\hat{f}(0.90) \right)  = \frac{1}{n_{\texttt{sims}}}\sum_{i = 1}^{n_{\texttt{sims}}} \left(\hat{f}_k^{[i]}(0.90) \right) - f(0.90)
+    #        $$
+    # This is just the deviation of our average hypothesis predictions from the ground truth Y_test
+    # Remember to square it!
     bias = average_hypothesis_predictions - Y_test
-    variance = np.sum((all_predictions - average_hypothesis_predictions) ** 2) / num_simulations
+
+    # Variance:
+    # $$
+    # \widehat{\text{var}} \left(\hat{f}(0.90) \right) = \frac{1}{n_{\texttt{sims}}}\sum_{i = 1}^{n_{\texttt{sims}}} \left(\hat{f}_k^{[i]}(0.90) - \frac{1}{n_{\texttt{sims}}}\sum_{i = 1}^{n_{\texttt{sims}}}\hat{f}_k^{[i]}(0.90) \right)^2
+    # $$
+    # This intuitively just illustrates for each prediction made by each hypothesis, how much are they deviating from the average hypothesis predictions?
+    # To quantify this,
+    # 1. total_error_deviated_from_average_hypothesis = add up all deviations from h_i from \bar{h}
+
+    total_error_deviated_from_average_hypothesis = 0
+    for i in range(num_simulations):
+        total_squared_error_for_current_hypothesis_vs_average_hypothesis = (
+            all_predictions[i] - average_hypothesis_predictions
+        ) ** 2
+        total_squared_error_for_current_hypothesis_vs_average_hypothesis = (
+            total_squared_error_for_current_hypothesis_vs_average_hypothesis / num_y_test
+        )
+        total_error_deviated_from_average_hypothesis += (
+            total_squared_error_for_current_hypothesis_vs_average_hypothesis
+        )
+
+    variance = total_error_deviated_from_average_hypothesis / num_simulations
+
+    # variance = np.sum((all_predictions - average_hypothesis_predictions) ** 2) / num_simulations
     print(expected_test_error)
     print(bias ** 2)
     print(variance)
-    print(bias ** 2 + variance)
+    print(bias ** 2 + variance)  # see this matches perfectly with the decomposition.
