@@ -24,7 +24,7 @@ def f_true(x: np.ndarray) -> np.ndarray:
 
 
 def generate_sim_data(
-    f_true, mu: float = 0, sigma: float = 0.3, has_epsilon=True, sample_size=100
+    f_true, mu: float = 0, sigma: float = 0.1, has_epsilon=True, sample_size=100
 ) -> np.ndarray:
     """Here is a function generate simulated data.
 
@@ -53,9 +53,9 @@ def generate_sim_data(
     if has_epsilon is True:
         # The real error which is irreducible
         epsilon = np.random.normal(mu, sigma, size=sample_size)
-        # Y_train = f_true(X_train) + epsilon
+        Y_train = f_true(X_train) + epsilon
         # why is this not the same as above? Because we need take mu = mean of X_train
-        Y_train = np.random.normal(0.81, 0.3, sample_size)
+        # Y_train = np.random.normal(0.81, 0.3, sample_size)
     else:
         Y_train = f_true(X_train)
 
@@ -119,8 +119,9 @@ def get_predictions(f_true, estimator, num_simulations, num_samples, X_test, Y_t
         curr_hypothesis = f"h_D_{sim}"
         # generated X_train and Y_train from distribution
         X_train, Y_train = generate_sim_data(
-            f_true, mu=0, sigma=0.3, has_epsilon=True, sample_size=num_samples
+            f_true, mu=0, sigma=0.1, has_epsilon=True, sample_size=num_samples
         )
+
         # fit our hypothesis on X_train, Y_train
 
         estimator.fit(X_train.reshape(-1, 1), Y_train.reshape(-1, 1))
@@ -193,7 +194,7 @@ def get_expected_test_error(Y_test, all_predictions, num_simulations):
     return expected_test_error
 
 
-def get_bias(Y_test, all_predictions, h_bar, num_simulations):
+def get_bias(Y_test, h_bar):
     """[summary]
 
     all_predictions = [h1, h2, h3, ..., h_k]
@@ -206,10 +207,9 @@ def get_bias(Y_test, all_predictions, h_bar, num_simulations):
         num_y_test ([type]): [description]
     """
 
-    # bias = np.sum((h_bar.reshape(Y_test.shape) - Y_test) ** 2) / Y_test.shape[0]
     h_bar = h_bar.reshape(Y_test.shape)
-    bias = mean_squared_error(h_bar, Y_test)
-
+    bias = np.sum(np.square(h_bar - Y_test)) / Y_test.shape[0]
+    assert bias == mean_squared_error(h_bar, Y_test)
     return bias
 
 
@@ -238,8 +238,10 @@ if __name__ == "__main__":
     num_simulations = 2
     num_samples = 3
     X_test = np.array([[0.9], [1.2]])
+    # X_test = np.array([[0.9]])
 
     Y_test = f_true(X_test)
+
     num_y_test = Y_test.shape[0]
 
     polynomial_degree_1 = make_pipeline(PolynomialFeatures(degree=1), LinearRegression())
@@ -253,14 +255,17 @@ if __name__ == "__main__":
         Y_test=Y_test,
         X_test=X_test,
     )
+
     h_bar = np.mean(all_predictions, axis=0).reshape(Y_test.shape)
+
     assert h_bar.shape == Y_test.shape == (num_y_test, 1)
     assert all_predictions.shape == (num_simulations, num_y_test)
+
     expected_test_error = get_expected_test_error(Y_test, all_predictions, num_simulations)
 
     print("Expected Test Error", expected_test_error)
 
-    bias = get_bias(Y_test, all_predictions, h_bar, num_simulations)
+    bias = get_bias(Y_test, h_bar)
     print("Bias", bias)
 
     variance = get_variance(Y_test, all_predictions, h_bar, num_simulations)
