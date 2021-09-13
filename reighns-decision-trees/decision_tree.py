@@ -9,9 +9,7 @@ from typing import *
 import pandas as pd
 import importlib
 
-Entropy = importlib.import_module(
-    "reighns-utils.scripts.entropy", package="reighns-utils"
-)
+Entropy = importlib.import_module("reighns-utils.scripts.entropy", package="reighns-utils")
 
 import pprint
 
@@ -65,9 +63,7 @@ class DecisionTree(object):
         Loss function that is used for Gradient Boosting models to calculate impurity.
     """
 
-    def __init__(
-        self, min_samples_split=2, min_impurity=1e-7, max_depth=float("inf"), loss=None
-    ):
+    def __init__(self, min_samples_split=2, min_impurity=1e-7, max_depth=float("inf"), loss=None):
         self.root = None  # Root node in dec. tree
         # Minimum n of samples to justify split
         self.min_samples_split = min_samples_split
@@ -85,7 +81,7 @@ class DecisionTree(object):
         self.loss = loss
 
     def fit(self, X, y, loss=None):
-        """ Build decision tree """
+        """Build decision tree"""
         self.one_dim = len(np.shape(y)) == 1
         self.root = self._build_tree(X, y)
         self.loss = None
