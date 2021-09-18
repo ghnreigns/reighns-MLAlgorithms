@@ -38,7 +38,7 @@ You are assumed to have setup Git and Cuda in Ubuntu already, if not, refer to
 3. Create a file named `setup.py` and `requirements.txt` concurrently. The latter should have the libraries that one is interested in having for his project while the formal is a `setup.py` file where it contains the setup object which describes how to set up our package and it's dependencies. The first several lines cover metadata (name, description, etc.) and then we define the requirements. Here we're stating that we require a Python version equal to or above 3.8 and then passing in our required packages to install_requires. Finally, we define extra requirements that different types of users may require. This is a standard practice.
 
     ```python
-    pip install -e . -f https://download.pytorch.org/whl/torch_stable.html  # installs required packages only      
+    pip install -e . -f https://download.pytorch.org/whl/torch_stable.html  # installs required packages only       -f https://download.pytorch.org/whl/torch_stable.html
     python -m pip install -e ".[dev]"                                       # installs required + dev packages
     python -m pip install -e ".[test]"                                      # installs required + test packages
     python -m pip install -e ".[docs_packages]"                             # installs required documentation packages
